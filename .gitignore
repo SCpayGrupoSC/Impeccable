@@ -1,0 +1,3 @@
+# Impeccable live-mode runtime state (local, ephemeral — not project source)
+.impeccable/live/server.json
+.impeccable/live/sessions/
