@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carteira Comercial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --ink:#1B1E1B;
+    --ink-soft:#5B6058;
+    --paper:#FAF8F2;
+    --paper-dim:#F1EEE4;
+    --shell:#14171A;
+    --shell-soft:#22262A;
+    --line:#DEDACB;
+    --green:#0F8A5F;
+    --green-soft:#E4F2EA;
+    --red:#C1432E;
+    --red-soft:#F7E7E3;
+    --gold:#B8862E;
+    --gold-soft:#F3E9D4;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper-dim);
+    color:var(--ink);
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  #app{max-width:1180px;margin:0 auto;padding:0 20px 80px;}
+
+  /* ---- Header ---- */
+  .topbar{
+    background:var(--shell);
+    color:var(--paper);
+    margin:0 -20px 24px;
+    padding:22px 24px 20px;
+  }
+  .topbar-inner{max-width:1180px;margin:0 auto;}
+  .brand-row{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{
+    width:30px;height:30px;border-radius:6px;
+    background:linear-gradient(135deg,var(--green),#0a5c3f);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-weight:700;color:#fff;font-size:14px;
+    flex-shrink:0;
+  }
+  .brand h1{font-size:18px;margin:0;font-weight:600;letter-spacing:.2px;}
+  .brand .tag{font-size:11.5px;color:#9BA39B;margin-top:1px;font-family:'IBM Plex Mono',monospace;letter-spacing:.3px;}
+  .sync-info{font-size:11.5px;color:#9BA39B;font-family:'IBM Plex Mono',monospace;text-align:right;}
+  .sync-info b{color:#D8E8DE;}
+
+  .controls-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;}
+  .period-box{display:flex;align-items:center;gap:8px;background:var(--shell-soft);border:1px solid #33383D;border-radius:8px;padding:6px 10px;}
+  .period-box label{font-size:10.5px;color:#9BA39B;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.4px;}
+  .period-box input[type=date]{
+    background:transparent;border:none;color:var(--paper);font-family:'IBM Plex Mono',monospace;font-size:13px;
+  }
+  .period-box input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.6;cursor:pointer;}
+  .period-sep{color:#5B6058;font-size:12px;}
+
+  .btn{
+    font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;
+    border-radius:8px;padding:9px 14px;border:1px solid transparent;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;transition:opacity .15s ease, transform .1s ease;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn-upload{background:var(--green);color:#fff;}
+  .btn-upload:hover{opacity:.9;}
+  .btn-ghost{background:transparent;color:var(--paper);border-color:#3A3F44;}
+  .btn-ghost:hover{background:var(--shell-soft);}
+  .btn-primary{background:var(--ink);color:#fff;}
+  .btn-primary:hover{opacity:.88;}
+  .btn-outline{background:var(--paper);color:var(--ink);border:1px solid var(--line);}
+  .btn-outline:hover{background:var(--paper-dim);}
+  .btn-danger-text{background:none;border:none;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;padding:4px 6px;}
+  .btn-sm{padding:6px 10px;font-size:12px;}
+  #fileInput{display:none;}
+
+  /* ---- Tabs ---- */
+  .tabs-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:18px;}
+  .tab-pill{
+    display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+    padding:9px 16px;border-radius:9px;border:1px solid var(--line);
+    background:var(--paper);cursor:pointer;min-width:130px;position:relative;
+  }
+  .tab-pill.active{border-color:var(--ink);background:var(--ink);}
+  .tab-pill .t-name{font-size:12.5px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:5px;}
+  .tab-pill.active .t-name{color:#fff;}
+  .tab-pill .t-meta{font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);}
+  .tab-pill.active .t-meta{color:#C9CFC9;}
+  .tab-badge{width:6px;height:6px;border-radius:50%;background:var(--gold);flex-shrink:0;}
+  .tab-add{
+    padding:9px 14px;border-radius:9px;border:1px dashed #B9B4A2;background:transparent;
+    color:var(--ink-soft);font-size:12.5px;cursor:pointer;font-weight:500;
+  }
+  .tab-add:hover{border-color:var(--ink);color:var(--ink);}
+
+  /* ---- Receipt summary card ---- */
+  .receipt{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px 22px 16px;margin-bottom:20px;
+    position:relative;
+    box-shadow:0 1px 0 rgba(0,0,0,.02);
+  }
+  .receipt::after{
+    content:"";position:absolute;left:0;right:0;bottom:-1px;height:8px;
+    background-image:radial-gradient(circle at 6px 4px, var(--paper-dim) 4px, transparent 4.5px);
+    background-size:14px 8px;background-repeat:repeat-x;
+  }
+  .receipt-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+  .receipt-head h2{font-size:15px;margin:0;font-weight:600;}
+  .receipt-head .period-label{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
+  .receipt-dash{border:none;border-top:1px dashed var(--line);margin:10px 0 14px;}
+  .receipt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;}
+  .r-item .r-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;margin-bottom:4px;}
+  .r-item .r-value{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;}
+  .r-item .r-value.green{color:var(--green);}
+  .r-item .r-value.red{color:var(--red);}
+  .r-item .r-sub{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+
+  /* ---- Toolbar (add client) ---- */
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+  .toolbar h3{font-size:14px;margin:0;font-weight:600;}
+  .toolbar .count{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);}
+
+  .add-panel{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:16px;display:none;
+  }
+  .add-panel.open{display:block;}
+  .add-grid{display:grid;grid-template-columns:1.3fr 1.6fr 1fr auto;gap:10px;align-items:end;}
+  @media(max-width:760px){.add-grid{grid-template-columns:1fr 1fr;}}
+  .field label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;margin-bottom:5px;}
+  .field input{
+    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;
+    font-family:'IBM Plex Sans',sans-serif;font-size:13px;background:var(--paper-dim);color:var(--ink);
+  }
+  .field input:focus{outline:2px solid var(--ink);outline-offset:-1px;background:#fff;}
+  .add-hint{font-size:11px;color:var(--ink-soft);margin-top:8px;}
+
+  /* ---- Table ---- */
+  .table-wrap{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+  table{width:100%;border-collapse:collapse;}
+  thead th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;
+    color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;font-weight:500;
+    padding:11px 14px;border-bottom:1px solid var(--line);background:var(--paper-dim);
+  }
+  tbody td{padding:12px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#FCFBF7;}
+  .cli-name{font-weight:600;}
+  .cli-cnpj{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);}
+  .val-cell{font-family:'IBM Plex Mono',monospace;font-weight:600;text-align:right;}
+  .val-cell.zero{color:var(--ink-soft);font-weight:400;}
+  .qty-cell{font-family:'IBM Plex Mono',monospace;text-align:right;color:var(--ink-soft);font-size:12.5px;}
+  .date-input{
+    border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-family:'IBM Plex Mono',monospace;
+    font-size:12px;background:var(--paper-dim);color:var(--ink);width:130px;
+  }
+  .date-input:focus{outline:2px solid var(--ink);outline-offset:-1px;background:#fff;}
+  .badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:10.5px;font-weight:600;font-family:'IBM Plex Mono',monospace;}
+  .badge.on{background:var(--green-soft);color:var(--green);}
+  .badge.off{background:var(--red-soft);color:var(--red);}
+  .row-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;}
+  select.move-select{
+    font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;border:1px solid var(--line);border-radius:6px;
+    padding:5px 6px;background:#fff;color:var(--ink-soft);max-width:120px;
+  }
+  .empty-state{padding:48px 20px;text-align:center;color:var(--ink-soft);}
+  .empty-state .big{font-size:32px;margin-bottom:6px;}
+  .empty-state p{font-size:13px;margin:4px 0;}
+
+  .tab-manage{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;}
+
+  /* ---- Toast ---- */
+  #toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--shell);color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;
+    font-family:'IBM Plex Mono',monospace;opacity:0;pointer-events:none;transition:all .25s ease;
+    box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:999;max-width:90vw;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  #toast.err{background:var(--red);}
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(20,23,26,.55);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:12px;padding:22px;max-width:340px;width:100%;}
+  .modal h3{margin:0 0 6px;font-size:15px;}
+  .modal p{font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;}
+  .modal input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font-size:13px;margin-bottom:14px;}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+
+  .loading-wrap{padding:60px 0;text-align:center;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand-row">
+        <div class="brand">
+          <div class="brand-mark">$</div>
+          <div>
+            <h1>Carteira Comercial</h1>
+            <div class="tag">GESTÃO DE CLIENTES · DOCK</div>
+          </div>
+        </div>
+        <div class="sync-info" id="syncInfo">Nenhuma base de vendas carregada ainda</div>
+      </div>
+      <div class="controls-row">
+        <div class="period-box">
+          <label>De</label>
+          <input type="date" id="periodStart">
+          <span class="period-sep">→</span>
+          <label>Até</label>
+          <input type="date" id="periodEnd">
+        </div>
+        <button class="btn btn-upload" id="btnUpload">⇪ Carregar arquivo de vendas (Dock)</button>
+        <input type="file" id="fileInput" accept=".xlsx,.xls">
+        <button class="btn btn-ghost btn-sm" id="btnReset" style="margin-left:auto;">Limpar minha carteira</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mainArea">
+    <div class="loading-wrap">carregando carteira…</div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3 id="modalTitle">Nova aba promocional</h3>
+    <p id="modalDesc">Dê um nome para agrupar clientes de uma campanha ou promoção específica.</p>
+    <input type="text" id="modalInput" placeholder="Ex: Promoção Julho/2026">
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-sm" id="modalCancel">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="modalConfirm">Criar aba</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ State ============ */
+  var state = {
+    tabs: [],       // {id, nome, tipo:'principal'|'promocional'}
+    clients: [],    // {id, cnpj, nome, tabId, entrega, ativo, criadoEm}
+    vendas: null,   // {byCnpj:{cnpj:{byDate:{'YYYY-MM-DD':{valor,qtd}}, nome}}, meta:{arquivo,atualizadoEm,dataMin,dataMax}}
+    activeTab: null,
+    periodStart: null,
+    periodEnd: null,
+    addPanelOpen: false
+  };
+
+  var STORAGE_CLIENTS = 'carteira:clientes-e-abas';
+  var STORAGE_VENDAS = 'carteira:vendas-agregadas';
+
+  /* ============ Helpers ============ */
+  function uid(prefix){ return prefix + '_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4); }
+
+  function onlyDigits(s){ return (s||'').replace(/\D/g,''); }
+
+  function formatCNPJ(v){
+    var d = onlyDigits(v).padStart(14,'0').slice(0,14);
+    return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  }
+
+  function formatBRL(n){
+    var neg = n < 0;
+    var abs = Math.abs(n||0);
+    var s = abs.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    return (neg?'-':'') + 'R$ ' + s;
+  }
+
+  function toISODate(d){
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  function parseDockDate(str){
+    // formato: "30/06/2026 - 23:45"
+    if(!str) return null;
+    var m = String(str).match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    if(!m) return null;
+    return new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10));
+  }
+
+  function showToast(msg, isErr){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'show' + (isErr?' err':'');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){ t.className=''; }, 3600);
+  }
+
+  /* ============ Storage ============ */
+  async function loadState(){
+    try{
+      var res = await window.storage.get(STORAGE_CLIENTS, false);
+      if(res && res.value){
+        var parsed = JSON.parse(res.value);
+        state.tabs = parsed.tabs || [];
+        state.clients = parsed.clients || [];
+      }
+    }catch(e){ /* sem dados salvos ainda */ }
+
+    if(!state.tabs || state.tabs.length === 0){
+      state.tabs = [{id:'principal', nome:'Carteira Principal', tipo:'principal'}];
+    }
+    state.activeTab = state.tabs[0].id;
+
+    try{
+      var res2 = await window.storage.get(STORAGE_VENDAS, false);
+      if(res2 && res2.value){
+        state.vendas = JSON.parse(res2.value);
+      }
+    }catch(e){ /* sem vendas salvas ainda */ }
+
+    // periodo default
+    if(state.vendas && state.vendas.meta){
+      state.periodStart = state.vendas.meta.dataMin;
+      state.periodEnd = state.vendas.meta.dataMax;
+    } else {
+      var today = new Date();
+      var start = new Date(today.getFullYear(), today.getMonth(), 1);
+      state.periodStart = toISODate(start);
+      state.periodEnd = toISODate(today);
+    }
+  }
+
+  async function persistClients(){
+    try{
+      await window.storage.set(STORAGE_CLIENTS, JSON.stringify({tabs:state.tabs, clients:state.clients}), false);
+    }catch(e){
+      showToast('Não foi possível salvar a carteira agora. Suas alterações estão visíveis, mas tente novamente.', true);
+    }
+  }
+
+  async function persistVendas(){
+    try{
+      await window.storage.set(STORAGE_VENDAS, JSON.stringify(state.vendas), false);
+    }catch(e){
+      showToast('Base carregada, mas não foi possível salvá-la para a próxima visita.', true);
+    }
+  }
+
+  /* ============ Sales file parsing ============ */
+  function handleFile(file){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        var data = new Uint8Array(e.target.result);
+        var wb = XLSX.read(data, {type:'array'});
+        var sheetName = wb.SheetNames.find(function(n){ return /transa/i.test(n); }) || wb.SheetNames[0];
+        var sheet = wb.Sheets[sheetName];
+        var rows = XLSX.utils.sheet_to_json(sheet, {defval:null});
+        if(!rows.length){ showToast('O arquivo não contém linhas de transações.', true); return; }
+
+        var byCnpj = {};
+        var minDate = null, maxDate = null;
+        var countRows = 0;
+
+        rows.forEach(function(row){
+          var status = row['Status'];
+          if(status !== 'Aprovado') return; // apenas aprovadas (líquido, já desconta cancelamento/estorno)
+          var cnpjRaw = row['Cnpj do Estabelecimento'];
+          if(cnpjRaw === null || cnpjRaw === undefined) return;
+          var cnpj = onlyDigits(String(cnpjRaw)).padStart(14,'0');
+          var nome = row['Nome do estabelecimento'] || '';
+          var dt = parseDockDate(row['Data']);
+          if(!dt) return;
+          var iso = toISODate(dt);
+          var valor = parseFloat(row['Valor']);
+          if(isNaN(valor)) valor = 0;
+
+          if(!byCnpj[cnpj]) byCnpj[cnpj] = {nome:nome, byDate:{}};
+          if(!byCnpj[cnpj].byDate[iso]) byCnpj[cnpj].byDate[iso] = {valor:0, qtd:0};
+          byCnpj[cnpj].byDate[iso].valor += valor;
+          byCnpj[cnpj].byDate[iso].qtd += 1;
+          byCnpj[cnpj].nome = nome || byCnpj[cnpj].nome;
+
+          if(!minDate || dt < minDate) minDate = dt;
+          if(!maxDate || dt > maxDate) maxDate = dt;
+          countRows++;
+        });
+
+        if(countRows === 0){
+          showToast('Nenhuma transação Aprovada encontrada no arquivo.', true);
+          return;
+        }
+
+        var isFirstUpload = !state.vendas || !state.vendas.byCnpj;
+        if(isFirstUpload){
+          state.vendas = { byCnpj:{}, meta:{ uploads:[], dataMin:null, dataMax:null } };
+        }
+
+        // Mescla o arquivo novo na base acumulada. Para cada dia presente no
+        // arquivo novo, o dado desse dia é SUBSTITUÍDO (não somado) — assim,
+        // reenviar um arquivo que repete dias já carregados não duplica valores,
+        // mas dias novos (ex: a semana seguinte) são simplesmente adicionados ao histórico.
+        Object.keys(byCnpj).forEach(function(cnpj){
+          if(!state.vendas.byCnpj[cnpj]){
+            state.vendas.byCnpj[cnpj] = {nome: byCnpj[cnpj].nome, byDate:{}};
+          }
+          state.vendas.byCnpj[cnpj].nome = byCnpj[cnpj].nome || state.vendas.byCnpj[cnpj].nome;
+          Object.keys(byCnpj[cnpj].byDate).forEach(function(iso){
+            state.vendas.byCnpj[cnpj].byDate[iso] = byCnpj[cnpj].byDate[iso];
+          });
+        });
+
+        var newMin = toISODate(minDate), newMax = toISODate(maxDate);
+        var meta = state.vendas.meta;
+        meta.dataMin = meta.dataMin ? (newMin < meta.dataMin ? newMin : meta.dataMin) : newMin;
+        meta.dataMax = meta.dataMax ? (newMax > meta.dataMax ? newMax : meta.dataMax) : newMax;
+        meta.atualizadoEm = new Date().toISOString();
+        meta.arquivo = file.name;
+        meta.uploads = meta.uploads || [];
+        meta.uploads.push({arquivo:file.name, em:meta.atualizadoEm, linhas:countRows, periodoMin:newMin, periodoMax:newMax});
+
+        // Amplia o período visível para cobrir todo o histórico acumulado.
+        state.periodStart = state.periodStart ? (meta.dataMin < state.periodStart ? meta.dataMin : state.periodStart) : meta.dataMin;
+        state.periodEnd = meta.dataMax;
+
+        persistVendas();
+        showToast((isFirstUpload ? 'Base carregada: ' : 'Base acumulada: ') + countRows.toLocaleString('pt-BR') + ' transações aprovadas deste arquivo · histórico agora cobre ' + meta.dataMin.split('-').reverse().join('/') + ' a ' + meta.dataMax.split('-').reverse().join('/'));
+        render();
+      }catch(err){
+        console.error(err);
+        showToast('Não consegui ler esse arquivo. Confirme se é a exportação de transações da Dock (.xlsx).', true);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  /* ============ Calculations ============ */
+  function resultForClient(cnpj){
+    if(!state.vendas || !state.vendas.byCnpj) return {valor:0, qtd:0, temDados:false};
+    var d = onlyDigits(cnpj).padStart(14,'0');
+    var entry = state.vendas.byCnpj[d];
+    if(!entry) return {valor:0, qtd:0, temDados:false};
+    var valor = 0, qtd = 0;
+    Object.keys(entry.byDate).forEach(function(iso){
+      if(iso >= state.periodStart && iso <= state.periodEnd){
+        valor += entry.byDate[iso].valor;
+        qtd += entry.byDate[iso].qtd;
+      }
+    });
+    return {valor:valor, qtd:qtd, temDados:true};
+  }
+
+  function suggestedNameForCNPJ(cnpj){
+    if(!state.vendas || !state.vendas.byCnpj) return '';
+    var d = onlyDigits(cnpj).padStart(14,'0');
+    var entry = state.vendas.byCnpj[d];
+    return entry ? entry.nome : '';
+  }
+
+  function clientsInTab(tabId){
+    return state.clients.filter(function(c){ return c.tabId === tabId; });
+  }
+
+  function tabTotals(tabId){
+    var list = clientsInTab(tabId);
+    var total = 0, qtd = 0, semVolume = 0, ativos = 0;
+    list.forEach(function(c){
+      var r = resultForClient(c.cnpj);
+      total += r.valor; qtd += r.qtd;
+      if(c.ativo) ativos++;
+      if(r.valor === 0) semVolume++;
+    });
+    return {total:total, qtd:qtd, clientes:list.length, semVolume:semVolume, ativos:ativos};
+  }
+
+  /* ============ Rendering ============ */
+  function fmtPeriodLabel(){
+    if(!state.periodStart || !state.periodEnd) return '';
+    var s = state.periodStart.split('-').reverse().join('/');
+    var e = state.periodEnd.split('-').reverse().join('/');
+    return s + ' — ' + e;
+  }
+
+  function render(){
+    document.getElementById('periodStart').value = state.periodStart || '';
+    document.getElementById('periodEnd').value = state.periodEnd || '';
+
+    var syncEl = document.getElementById('syncInfo');
+    if(state.vendas && state.vendas.meta){
+      var m = state.vendas.meta;
+      var upd = new Date(m.atualizadoEm);
+      var nUploads = (m.uploads || []).length;
+      syncEl.innerHTML = 'Histórico: <b>' + m.dataMin.split('-').reverse().join('/') + ' a ' + m.dataMax.split('-').reverse().join('/') + '</b>' +
+        ' · ' + nUploads + ' carga' + (nUploads!==1?'s':'') + ' importada' + (nUploads!==1?'s':'') +
+        ' · última: ' + m.arquivo + ' em ' + upd.toLocaleDateString('pt-BR') + ' ' + upd.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    } else {
+      syncEl.textContent = 'Nenhuma base de vendas carregada ainda';
+    }
+
+    var main = document.getElementById('mainArea');
+    main.innerHTML = '';
+
+    // ---- Tabs bar ----
+    var tabsRow = document.createElement('div');
+    tabsRow.className = 'tabs-row';
+    state.tabs.forEach(function(t){
+      var totals = tabTotals(t.id);
+      var pill = document.createElement('div');
+      pill.className = 'tab-pill' + (t.id === state.activeTab ? ' active' : '');
+      pill.innerHTML =
+        '<div class="t-name">' + (t.tipo==='promocional' ? '<span class="tab-badge"></span>' : '') + escapeHTML(t.nome) + '</div>' +
+        '<div class="t-meta">' + totals.clientes + ' cliente' + (totals.clientes!==1?'s':'') + ' · ' + formatBRL(totals.total) + '</div>';
+      pill.onclick = function(){ state.activeTab = t.id; render(); };
+      tabsRow.appendChild(pill);
+    });
+    var addTabBtn = document.createElement('button');
+    addTabBtn.className = 'tab-add';
+    addTabBtn.textContent = '+ Nova aba promocional';
+    addTabBtn.onclick = openNewTabModal;
+    tabsRow.appendChild(addTabBtn);
+    main.appendChild(tabsRow);
+
+    var activeTabObj = state.tabs.find(function(t){ return t.id === state.activeTab; });
+    var totals = tabTotals(state.activeTab);
+
+    // ---- Receipt summary ----
+    var receipt = document.createElement('div');
+    receipt.className = 'receipt';
+    receipt.innerHTML =
+      '<div class="receipt-head">' +
+        '<div><h2>' + escapeHTML(activeTabObj.nome) + '</h2><div class="period-label">Período ' + fmtPeriodLabel() + '</div></div>' +
+      '</div>' +
+      '<hr class="receipt-dash">' +
+      '<div class="receipt-grid">' +
+        '<div class="r-item"><div class="r-label">Resultado no período</div><div class="r-value ' + (totals.total<0?'red':'green') + '">' + formatBRL(totals.total) + '</div></div>' +
+        '<div class="r-item"><div class="r-label">Transações</div><div class="r-value">' + totals.qtd.toLocaleString('pt-BR') + '</div></div>' +
+        '<div class="r-item"><div class="r-label">Clientes na aba</div><div class="r-value">' + totals.clientes + '</div><div class="r-sub">' + totals.ativos + ' ativo(s)</div></div>' +
+        '<div class="r-item"><div class="r-label">Sem volume no período</div><div class="r-value ' + (totals.semVolume>0?'red':'') + '">' + totals.semVolume + '</div></div>' +
+      '</div>';
+    main.appendChild(receipt);
+
+    // ---- Toolbar ----
+    var toolbar = document.createElement('div');
+    toolbar.className = 'toolbar';
+    toolbar.innerHTML = '<h3>Clientes desta aba</h3>';
+    var toolbarRight = document.createElement('div');
+    toolbarRight.style.display = 'flex'; toolbarRight.style.gap = '8px'; toolbarRight.style.alignItems='center';
+    var addBtn = document.createElement('button');
+    addBtn.className = 'btn btn-primary btn-sm';
+    addBtn.textContent = state.addPanelOpen ? 'Fechar' : '+ Incluir cliente';
+    addBtn.onclick = function(){ state.addPanelOpen = !state.addPanelOpen; render(); };
+    toolbarRight.appendChild(addBtn);
+    toolbar.appendChild(toolbarRight);
+    main.appendChild(toolbar);
+
+    // ---- Add panel ----
+    var addPanel = document.createElement('div');
+    addPanel.className = 'add-panel' + (state.addPanelOpen ? ' open' : '');
+    addPanel.innerHTML =
+      '<div class="add-grid">' +
+        '<div class="field"><label>CNPJ</label><input type="text" id="inCnpj" placeholder="00.000.000/0000-00" maxlength="18"></div>' +
+        '<div class="field"><label>Nome do estabelecimento</label><input type="text" id="inNome" placeholder="Preenche sozinho se já houver vendas"></div>' +
+        '<div class="field"><label>Entrega da maquininha</label><input type="date" id="inEntrega"></div>' +
+        '<button class="btn btn-primary" id="btnConfirmAdd">Incluir</button>' +
+      '</div>' +
+      '<div class="add-hint">O cliente entra na aba "' + escapeHTML(activeTabObj.nome) + '". Você pode movê-lo depois.</div>';
+    main.appendChild(addPanel);
+
+    if(state.addPanelOpen){
+      var cnpjInput = document.getElementById('inCnpj');
+      cnpjInput.addEventListener('input', function(){
+        var digits = onlyDigits(cnpjInput.value).slice(0,14);
+        cnpjInput.value = digits.length>2 ? formatCNPJ(digits) : digits;
+        var nomeInput = document.getElementById('inNome');
+        if(digits.length === 14 && !nomeInput.value){
+          var sug = suggestedNameForCNPJ(digits);
+          if(sug) nomeInput.value = sug;
+        }
+      });
+      document.getElementById('btnConfirmAdd').onclick = function(){ addClient(); };
+    }
+
+    // ---- Table ----
+    var list = clientsInTab(state.activeTab).slice().sort(function(a,b){
+      return resultForClient(b.cnpj).valor - resultForClient(a.cnpj).valor;
+    });
+
+    var tableWrap = document.createElement('div');
+    tableWrap.className = 'table-wrap';
+
+    if(list.length === 0){
+      tableWrap.innerHTML = '<div class="empty-state"><div class="big">🧾</div><p><b>Nenhum cliente nesta aba ainda.</b></p><p>Use "Incluir cliente" para começar a montar a carteira.</p></div>';
+    } else {
+      var table = document.createElement('table');
+      table.innerHTML =
+        '<thead><tr>' +
+          '<th>Cliente</th><th>Entrega da maquininha</th><th style="text-align:right">Transações</th><th style="text-align:right">Resultado no período</th><th>Status</th><th></th>' +
+        '</tr></thead>';
+      var tbody = document.createElement('tbody');
+      list.forEach(function(c){
+        var r = resultForClient(c.cnpj);
+        var tr = document.createElement('tr');
+
+        var tdCliente = document.createElement('td');
+        tdCliente.innerHTML = '<div class="cli-name">' + escapeHTML(c.nome || '(sem nome)') + '</div><div class="cli-cnpj">' + formatCNPJ(c.cnpj) + '</div>';
+        tr.appendChild(tdCliente);
+
+        var tdEntrega = document.createElement('td');
+        var dateInp = document.createElement('input');
+        dateInp.type = 'date'; dateInp.className = 'date-input'; dateInp.value = c.entrega || '';
+        dateInp.onchange = function(){ c.entrega = dateInp.value; persistClients(); showToast('Data de entrega salva.'); };
+        tdEntrega.appendChild(dateInp);
+        tr.appendChild(tdEntrega);
+
+        var tdQtd = document.createElement('td');
+        tdQtd.className = 'qty-cell'; tdQtd.textContent = r.qtd.toLocaleString('pt-BR');
+        tr.appendChild(tdQtd);
+
+        var tdVal = document.createElement('td');
+        tdVal.className = 'val-cell' + (r.valor===0?' zero':'');
+        tdVal.textContent = formatBRL(r.valor);
+        tr.appendChild(tdVal);
+
+        var tdStatus = document.createElement('td');
+        var badge = document.createElement('span');
+        badge.className = 'badge ' + (r.valor !== 0 ? 'on' : 'off');
+        badge.textContent = r.valor !== 0 ? 'Com volume' : (r.temDados ? 'Sem volume no período' : 'Sem dados de venda');
+        tdStatus.appendChild(badge);
+        tr.appendChild(tdStatus);
+
+        var tdActions = document.createElement('td');
+        var actWrap = document.createElement('div'); actWrap.className = 'row-actions';
+        if(state.tabs.length > 1){
+          var sel = document.createElement('select'); sel.className = 'move-select';
+          var optMove = document.createElement('option'); optMove.textContent = 'Mover para…'; optMove.value = '';
+          sel.appendChild(optMove);
+          state.tabs.forEach(function(t){
+            if(t.id === c.tabId) return;
+            var o = document.createElement('option'); o.value = t.id; o.textContent = t.nome;
+            sel.appendChild(o);
+          });
+          sel.onchange = function(){
+            if(sel.value){ c.tabId = sel.value; persistClients(); showToast('Cliente movido de aba.'); render(); }
+          };
+          actWrap.appendChild(sel);
+        }
+        var delBtn = document.createElement('button');
+        delBtn.className = 'btn-danger-text'; delBtn.textContent = 'Excluir';
+        delBtn.onclick = function(){ removeClient(c.id); };
+        actWrap.appendChild(delBtn);
+        tdActions.appendChild(actWrap);
+        tr.appendChild(tdActions);
+
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      tableWrap.appendChild(table);
+    }
+    main.appendChild(tableWrap);
+
+    // ---- Tab management (rename/delete for non-principal) ----
+    if(activeTabObj.tipo === 'promocional'){
+      var manageRow = document.createElement('div');
+      manageRow.className = 'tab-manage';
+      var renameBtn = document.createElement('button');
+      renameBtn.className = 'btn btn-outline btn-sm';
+      renameBtn.textContent = 'Renomear aba';
+      renameBtn.onclick = function(){ openRenameTabModal(activeTabObj); };
+      var delTabBtn = document.createElement('button');
+      delTabBtn.className = 'btn btn-outline btn-sm';
+      delTabBtn.style.color = 'var(--red)';
+      delTabBtn.textContent = 'Excluir aba';
+      delTabBtn.onclick = function(){ deleteTab(activeTabObj.id); };
+      manageRow.appendChild(renameBtn);
+      manageRow.appendChild(delTabBtn);
+      main.appendChild(manageRow);
+    }
+  }
+
+  function escapeHTML(s){
+    var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML;
+  }
+
+  /* ============ Actions ============ */
+  function addClient(){
+    var cnpjEl = document.getElementById('inCnpj');
+    var nomeEl = document.getElementById('inNome');
+    var entregaEl = document.getElementById('inEntrega');
+    var digits = onlyDigits(cnpjEl.value);
+    if(digits.length !== 14){ showToast('Informe um CNPJ válido (14 dígitos).', true); return; }
+    if(state.clients.some(function(c){ return c.cnpj === digits; })){
+      showToast('Esse CNPJ já está em alguma aba da sua carteira.', true); return;
+    }
+    var nome = nomeEl.value.trim() || suggestedNameForCNPJ(digits) || 'Estabelecimento sem nome';
+    state.clients.push({
+      id: uid('cli'),
+      cnpj: digits,
+      nome: nome,
+      tabId: state.activeTab,
+      entrega: entregaEl.value || '',
+      ativo: true,
+      criadoEm: new Date().toISOString()
+    });
+    persistClients();
+    state.addPanelOpen = false;
+    showToast('Cliente incluído na carteira.');
+    render();
+  }
+
+  function removeClient(id){
+    state.clients = state.clients.filter(function(c){ return c.id !== id; });
+    persistClients();
+    showToast('Cliente excluído da carteira.');
+    render();
+  }
+
+  function openNewTabModal(){
+    document.getElementById('modalTitle').textContent = 'Nova aba promocional';
+    document.getElementById('modalDesc').textContent = 'Dê um nome para agrupar clientes de uma campanha ou promoção específica.';
+    var input = document.getElementById('modalInput');
+    input.value = '';
+    document.getElementById('modalConfirm').textContent = 'Criar aba';
+    document.getElementById('modalConfirm').onclick = function(){
+      var name = input.value.trim();
+      if(!name){ showToast('Dê um nome para a aba.', true); return; }
+      var id = uid('tab');
+      state.tabs.push({id:id, nome:name, tipo:'promocional'});
+      state.activeTab = id;
+      persistClients();
+      closeModal();
+      render();
+    };
+    document.getElementById('modalOverlay').classList.add('show');
+    input.focus();
+  }
+
+  function openRenameTabModal(tab){
+    document.getElementById('modalTitle').textContent = 'Renomear aba';
+    document.getElementById('modalDesc').textContent = 'Novo nome para esta aba promocional.';
+    var input = document.getElementById('modalInput');
+    input.value = tab.nome;
+    document.getElementById('modalConfirm').textContent = 'Salvar';
+    document.getElementById('modalConfirm').onclick = function(){
+      var name = input.value.trim();
+      if(!name){ showToast('Dê um nome para a aba.', true); return; }
+      tab.nome = name;
+      persistClients();
+      closeModal();
+      render();
+    };
+    document.getElementById('modalOverlay').classList.add('show');
+    input.focus();
+  }
+
+  function closeModal(){ document.getElementById('modalOverlay').classList.remove('show'); }
+
+  function deleteTab(tabId){
+    var clientsHere = clientsInTab(tabId).length;
+    if(clientsHere > 0){
+      var principal = state.tabs.find(function(t){ return t.tipo === 'principal'; });
+      state.clients.forEach(function(c){ if(c.tabId === tabId) c.tabId = principal.id; });
+    }
+    state.tabs = state.tabs.filter(function(t){ return t.id !== tabId; });
+    state.activeTab = state.tabs[0].id;
+    persistClients();
+    showToast(clientsHere > 0 ? 'Aba excluída. Clientes movidos para a Carteira Principal.' : 'Aba excluída.');
+    render();
+  }
+
+  /* ============ Wiring ============ */
+  document.getElementById('btnUpload').onclick = function(){ document.getElementById('fileInput').click(); };
+  document.getElementById('fileInput').onchange = function(e){
+    if(e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+    e.target.value = '';
+  };
+  document.getElementById('periodStart').onchange = function(e){ state.periodStart = e.target.value; render(); };
+  document.getElementById('periodEnd').onchange = function(e){ state.periodEnd = e.target.value; render(); };
+  document.getElementById('btnReset').onclick = function(){
+    if(confirm('Isso vai apagar todas as abas e clientes da sua carteira (a base de vendas carregada continua). Confirmar?')){
+      state.tabs = [{id:'principal', nome:'Carteira Principal', tipo:'principal'}];
+      state.clients = [];
+      state.activeTab = 'principal';
+      persistClients();
+      showToast('Carteira limpa.');
+      render();
+    }
+  };
+  document.getElementById('modalCancel').onclick = closeModal;
+  document.getElementById('modalOverlay').addEventListener('click', function(e){ if(e.target === this) closeModal(); });
+
+  /* ============ Init ============ */
+  loadState().then(render);
+
+})();
+</script>
+</body>
+</html>

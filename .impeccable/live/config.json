@@ -1,0 +1,6 @@
+{
+  "files": ["carteira-comercial.html"],
+  "insertBefore": "</body>",
+  "commentSyntax": "html",
+  "cspChecked": true
+}
